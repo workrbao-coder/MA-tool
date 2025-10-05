@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <title>MA撰寫工具</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#003C96" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192-v3.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192-v3.png">
+  <style>
+    :root{--gap:10px;--radius:8px;--muted:#6b7280;--brand-blue:#003C96;--soft-black:#1A1A1A;--bottom-height:160px}
+    html,body{height:100%;margin:0;font-family:Arial,"Noto Sans TC",sans-serif;background:#f6f7fb;color:var(--soft-black);}
+    #app{display:flex;flex-direction:column;height:100vh;gap:12px;padding:12px;box-sizing:border-box;}
+    header{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    h1{font-size:18px;margin:0}
+    .control-row{display:flex;gap:8px;align-items:center}
+    input[type=text], input[type=number]{padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff}
+    button{padding:8px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--brand-blue);color:#fff}
+    button.secondary{background:#3a3a3a}
+    button.danger{background:#ef4444}
+    .main-area{flex:1 1 auto;display:flex;gap:12px;align-items:flex-start;padding-bottom: calc(var(--bottom-height) + 20px);overflow:auto;}
+    .groups-wrapper{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:12px;}
+    .unclassified{background:#f3f4f6;border-radius:10px;padding:10px;border:1px dashed #d1d5db}
+    #groups{display:flex;flex-direction:column;gap:12px;overflow:auto;max-height:100%}
+    .group{background:#fff;border-radius:10px;padding:10px;border:1px solid #e5e7eb;box-shadow:0 1px 2px rgba(0,0,0,0.03);resize:vertical;overflow:auto;min-height:80px;max-height:60vh;transition: box-shadow .12s}
+    .group:active, .group:hover{box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    .group-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .group-title{font-weight:600;padding:6px 8px;border-radius:6px;background:#f8fafc;cursor:text}
+    .group-controls{margin-left:auto;display:flex;gap:6px;align-items:center}
+    .add-input{padding:6px;border-radius:6px;border:1px solid #ddd}
+    .word-list{display:flex;flex-wrap:wrap;gap:8px}
+    .word-item{position:relative;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;cursor:default;padding-right:18px;max-width:220px;word-break:break-word}
+    .word-item .label{cursor:pointer;user-select:none}
+    .icon-actions{position:absolute;top:4px;right:-5px;display:flex;flex-direction:column;gap:3px;z-index:5;pointer-events:auto}
+    .icon-btn{width:14px;height:14px;border-radius:50%;background:#fff;border:1.4px solid #111;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;font-size:12px;line-height:1}
+    .icon-btn svg{ width:10px;height:10px; stroke:#111; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round }
+    .icon-btn:hover{ background:#f3f3f3 }
+    .output-panel{position:fixed;left:12px;right:12px;bottom:12px;height:var(--bottom-height);background: #fff;border-radius:10px;box-shadow:0 14px 40px rgba(2,6,23,0.18);padding:12px;display:flex;flex-direction:column;gap:8px;z-index:999}
+    .output-row{display:flex;gap:8px;align-items:center}
+    textarea#output{flex:1;padding:12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;resize:vertical;height:72px}
+    .bottom-row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+    .muted{color:var(--muted);font-size:13px}
+    .input-with-icon{ display:flex; align-items:center; gap:8px; position:relative }
+    .input-with-icon input{ padding-left:36px; }
+    .input-icon{ position:absolute; left:8px; width:20px; height:20px; border-radius:50%; background:#fff; border:1.4px solid #111; display:flex; align-items:center; justify-content:center; padding:0; pointer-events:none }
+    .input-icon svg{ width:12px; height:12px; stroke:#111; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round }
+    @media (max-width:800px){ :root{ --bottom-height: 180px; } header{padding-bottom:6px} .control-row{flex-wrap:wrap} .word-item{max-width:140px} .output-panel{left:8px;right:8px;bottom:8px} }
+    #updateBtn.active{ border-color: var(--brand-blue) !important; box-shadow: 0 0 0 4px rgba(0,60,150,0.06); }
+    /* v1.3 tweaks */
+    .title-icon{ width:22px; height:22px; vertical-align:middle; margin-left:8px; border-radius:4px; }
+    .help-container{ display:inline-block; position:relative; margin-top:4px; }
+    .help-list{ position:absolute; top:28px; left:0; background:#fff; border:1px solid #ddd; border-radius:8px; padding:8px 10px; box-shadow:0 8px 20px rgba(0,0,0,0.12); width:320px; z-index:1200; display:none; }
+    .help-list ul{ margin:0; padding:0 12px; list-style:disc; font-size:13px; color:var(--muted); }
+    .help-list.show{ display:block; }
+
+    .small-input{ font-size:13px; padding:6px 8px; width:80px; }
+    .action-btn{ padding:8px 12px; border-radius:6px; font-size:14px; cursor:pointer; }
+
+    /* shrink toolbar inputs */
+    .toolbar-short{ width:160px !important; }
+    #historyLimit{ width:48px !important; }
+    .export-btn{ background: var(--brand-blue); color:#fff; border: none; /*padding:8px 12px; border-radius:6px; */}
+
+    .export-btn:hover{ background:#002a6b; }
+    .import-btn{ background:#fff; color:var(--brand-blue); border:2px solid var(--brand-blue); /*padding:6px 10px; border-radius:6px;*/ }
+    .export-btn, .import-btn{ display:inline-flex; align-items:center; justify-content:center; } /*new*/
+
+    .import-btn:hover{ background: rgba(0,60,150,0.06); }
+    .action-btn.changed{ box-shadow: 0 0 0 3px rgba(0,60,150,0.08); border-color: #003C96; }
+
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div style="display:flex;flex-direction:column;margin-right:8px">
+        <h1>MA撰寫工具</h1>
+        <div class="muted"> <!-- replaced by help button --> </div>
+      </div>
+
+      <div class="control-row">
+        <label class="muted">存檔 Key</label>
+        <input id="saveKey" type="text" value="Config1" class="small-input" />
+        <label class="muted">恢復記錄數</label>
+        <input id="historyLimit" type="number" min="1" value="50" style="small-input" />
+
+        <div class="input-with-icon" style="margin-left:6px">
+          <span class="input-icon" title="新增群組 (Folder)">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H3z"></path>
+            </svg>
+          </span>
+          <input id="newGroupInline" type="text" class="toolbar-short" placeholder="新增群組分類 (Enter)" />
+        </div>
+
+        <div class="input-with-icon">
+          <span class="input-icon" title="新增按鈕 (Add)">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+          </span>
+          <input id="newUnclassifiedInline" type="text" class="toolbar-short" placeholder="新增按鈕文字(加入未分類) (Enter)" />
+        </div>
+
+        <button id="btnExport" class="action-btn export-btn">匯出設定</button>
+        <label for="importFile" id="importLabel" class="action-btn import-btn" style="padding:8px 12px;border-radius:6px;cursor:pointer">匯入設定</label>
+        <input id="importFile" type="file" accept=".json" style="display:none" />
+
+        <div class="help-container" style="margin-left:8px">
+          <button id="helpBtn" style="background:#fff;border:1px solid #ccc;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">操作說明 ⓘ</button>
+          <div id="helpList" class="help-list">
+            <ul>
+              <li>左鍵：加入到輸出欄</li>
+              <li>編輯：右側鉛筆（或雙擊群組標題）</li>
+              <li>刪除：右側圓形 ×（可恢復）</li>
+              <li>拖曳：按鈕可跨群組；拖曳群組可排序</li>
+              <li>匯出/匯入設定可備份自訂的按鈕與分類</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-area">
+      <div class="groups-wrapper">
+        <div id="unclassified" class="unclassified">
+          <div id="un_list" class="word-list" data-group-index="0"></div>
+        </div>
+        <div id="groups"></div>
+      </div>
+    </div>
+
+    <div class="output-panel" id="outputPanel" aria-live="polite">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="muted">MA輸出區</div>
+        <div class="muted">提示：拖曳群組可排序；拖曳按鈕可跨群組</div>
+      </div>
+
+      <div class="output-row">
+        <textarea id="output" placeholder="顯示在這裡，也可以直接打字編輯..."></textarea>
+      </div>
+
+      <div class="bottom-row">
+        <button id="btnCopy">複製MA</button>
+        <button id="btnClear" class="secondary">清空</button>
+        <button id="btnRestoreBtn" class="secondary">恢復最近刪除的按鈕</button>
+        <button id="btnRestoreGroup" class="secondary">恢復最近刪除的群組</button>
+        <div class="muted" style="margin-left:auto">匯出會下載 JSON 檔；上方可新增群組/按鈕。</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+// main.js for MA-Tool v1.3
+const APP_VERSION = '1.3.0';
+const STORAGE_KEY_BASE = 'quickphrases_v3_';
+const VERSION_JSON_URL = '/version.json';
+let data = []; let deletedButtons = []; let deletedGroups = []; let historyLimit = 5;
+
+const saveKeyEl = document.getElementById && document.getElementById('saveKey');
+const historyLimitEl = document.getElementById && document.getElementById('historyLimit');
+const groupsContainer = document.getElementById && document.getElementById('groups');
+const unList = document.getElementById && document.getElementById('un_list');
+const output = document.getElementById && document.getElementById('output');
+const btnCopy = document.getElementById && document.getElementById('btnCopy');
+const btnClear = document.getElementById && document.getElementById('btnClear');
+const btnRestoreBtn = document.getElementById && document.getElementById('btnRestoreBtn');
+const btnRestoreGroup = document.getElementById && document.getElementById('btnRestoreGroup');
+const btnExport = document.getElementById && document.getElementById('btnExport');
+const importFile = document.getElementById && document.getElementById('importFile');
+const newGroupInline = document.getElementById && document.getElementById('newGroupInline');
+const newUnclassifiedInline = document.getElementById && document.getElementById('newUnclassifiedInline');
+
+function storageKey(){ return STORAGE_KEY_BASE + (saveKeyEl && saveKeyEl.value || 'Config1'); }
+function defaultData(){ return [{ name: null, words: [] }, { name: '水果', words: ['蘋果','香蕉'] }, { name: '形容詞', words: ['好吃','很棒'] }]; }
+
+function saveAll(){ try{ localStorage.setItem(storageKey(), JSON.stringify({ data, deletedButtons, deletedGroups, historyLimit })); }catch(e){} saveOutput(); }
+function loadAll(){ try{ const raw = localStorage.getItem(storageKey()); if (!raw){ data = defaultData(); deletedButtons=[]; deletedGroups=[]; historyLimit = parseInt(historyLimitEl && historyLimitEl.value,10) || 5; return; } const parsed = JSON.parse(raw); data = parsed.data || parsed || defaultData(); deletedButtons = parsed.deletedButtons || []; deletedGroups = parsed.deletedGroups || []; historyLimit = parsed.historyLimit || parseInt(historyLimitEl && historyLimitEl.value,10) || 5; }catch(e){ data = defaultData(); deletedButtons=[]; deletedGroups=[]; } ensureGroupIds(); }
+
+function ensureGroupIds(){ for (let i=0;i<data.length;i++){ if (i===0) continue; if (!data[i].id) data[i].id = 'g_' + Date.now() + '_' + Math.floor(Math.random()*10000); } }
+
+let sortables = []; let groupsSortable = null;
+function clearSortables(){ sortables.forEach(s=>s && s.destroy && s.destroy()); sortables = []; if (groupsSortable){ groupsSortable.destroy(); groupsSortable = null; } }
+function saveOutput(){ try{ localStorage.setItem(storageKey() + '_output', output && output.value); }catch(e){} }
+function loadOutput(){ try{ const v = localStorage.getItem(storageKey() + '_output'); if (v && output) output.value = v; }catch(e){} }
+
+function render(){ if (!Array.isArray(data) || data.length===0) data = defaultData(); if (!data[0] || data[0].name !== null) data.unshift({name:null, words:[]}); ensureGroupIds(); historyLimit = Math.max(1, parseInt(historyLimitEl && historyLimitEl.value,10) || historyLimit); while (deletedButtons.length > historyLimit) deletedButtons.pop(); while (deletedGroups.length > historyLimit) deletedGroups.pop(); if (!unList) return; unList.innerHTML = ''; (data[0].words || []).forEach((w, idx) => unList.appendChild(makeWordElement(w, 0, idx))); if (!groupsContainer) return; groupsContainer.innerHTML = ''; for (let i=1;i<data.length;i++){ const g = data[i]; const groupCard = document.createElement('div'); groupCard.className = 'group'; groupCard.dataset.id = g.id || ''; if (g.height) groupCard.style.height = g.height; const header = document.createElement('div'); header.className = 'group-header'; const title = document.createElement('div'); title.className = 'group-title'; title.textContent = g.name || '未命名'; title.addEventListener('dblclick', (ev)=>{ ev.stopPropagation(); const input = document.createElement('input'); input.type='text'; input.className='add-input'; input.value = g.name || ''; function finish(){ const v = input.value.trim(); if (v) g.name = v; input.replaceWith(title); title.textContent = g.name || '未命名'; saveAndRender(); } input.addEventListener('blur', finish); input.addEventListener('keydown', (e)=>{ if (e.key==='Enter') input.blur(); if (e.key==='Escape') input.replaceWith(title); }); title.replaceWith(input); input.focus(); input.select(); }); header.appendChild(title); const addInput = document.createElement('input'); addInput.className='add-input'; addInput.placeholder='新增按鈕，按 Enter 新增'; addInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ const val = addInput.value.trim(); if (val){ g.words.push(val); addInput.value=''; saveAndRender(); } } }); header.appendChild(addInput); const controls = document.createElement('div'); controls.className='group-controls'; const delG = document.createElement('button'); delG.className='danger'; delG.textContent='刪除群組'; delG.addEventListener('click', ()=>{ const rec = { name: g.name, words: [...g.words], index: i }; deletedGroups.unshift(rec); if (deletedGroups.length > historyLimit) deletedGroups.pop(); data.splice(i,1); saveAndRender(); }); controls.appendChild(delG); header.appendChild(controls); groupCard.appendChild(header); const list = document.createElement('div'); list.className = 'word-list'; list.dataset.groupIndex = i; (g.words || []).forEach((w, idx)=> list.appendChild(makeWordElement(w, i, idx))); groupCard.appendChild(list); groupsContainer.appendChild(groupCard); } clearSortables(); const lists = document.querySelectorAll('.word-list, #un_list'); lists.forEach(listEl=>{ const s = new Sortable(listEl, { group: 'shared', animation: 150, onEnd: function(evt){ const fromIdx = parseInt(evt.from.dataset.groupIndex || 0,10); const toIdx = parseInt(evt.to.dataset.groupIndex || 0,10); const oldIndex = evt.oldIndex; const newIndex = evt.newIndex; if (isNaN(fromIdx) || isNaN(toIdx)) return; const item = (data[fromIdx] && data[fromIdx].words && data[fromIdx].words[oldIndex]) || null; if (item === null){ render(); return; } data[fromIdx].words.splice(oldIndex,1); data[toIdx].words.splice(newIndex,0,item); saveAndRender(); } }); sortables.push(s); }); groupsSortable = new Sortable(groupsContainer, { animation: 200, handle: '.group-header', draggable: '.group', onEnd: function(evt){ const newOrder = [data[0]]; const cards = groupsContainer.querySelectorAll('.group'); cards.forEach(card=>{ const gid = card.dataset.id; const gobj = data.find(d=>d.id === gid); if (gobj) newOrder.push(gobj); }); data = newOrder; saveAndRender(); } }); saveAll(); }
+
+function makeWordElement(word, groupIndex, index){ const el = document.createElement('div'); el.className='word-item'; el.dataset.groupIndex = groupIndex; el.dataset.wordIndex = index; const label = document.createElement('span'); label.className='label'; label.textContent = word; label.title = '點擊加入輸出欄'; label.addEventListener('click', ()=>{ if (output) { output.value += word; saveOutput(); } }); el.appendChild(label); const actions = document.createElement('div'); actions.className='icon-actions'; const delBtn = document.createElement('button'); delBtn.className='icon-btn'; delBtn.title='刪除按鈕'; delBtn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 6L18 18M6 18L18 6"></path></svg>`; delBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const rec = { name: word, groupIndex, index }; deletedButtons.unshift(rec); if (deletedButtons.length>historyLimit) deletedButtons.pop(); data[groupIndex].words.splice(index,1); saveAndRender(); }); const editBtn = document.createElement('button'); editBtn.className='icon-btn'; editBtn.title='編輯文字'; editBtn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L18.81 8.94l-3.75-3.75L3 17.25z"></path><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>`; editBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const input = document.createElement('input'); input.type='text'; input.value = word; input.className='inline-edit'; el.replaceChild(input, label); input.focus(); input.select(); function finish(){ const v=input.value.trim(); if (v) data[groupIndex].words[index] = v; render(); } input.addEventListener('blur', finish); input.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') input.blur(); if(ev.key==='Escape') render(); }); }); actions.appendChild(delBtn); actions.appendChild(editBtn); el.appendChild(actions); return el; }
+
+newGroupInline && newGroupInline.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ const name = newGroupInline.value.trim(); if (!name) return; const id = 'g_' + Date.now() + '_' + Math.floor(Math.random()*10000); data.push({ id, name, words: [], height: '' }); newGroupInline.value=''; saveAndRender(); }});
+newUnclassifiedInline && newUnclassifiedInline.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ const txt = newUnclassifiedInline.value.trim(); if (!txt) return; data[0].words.push(txt); newUnclassifiedInline.value=''; saveAndRender(); }});
+
+btnCopy && btnCopy.addEventListener('click', ()=>{ if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(output.value).then(()=> alert('已複製')).catch(()=> { output.select(); document.execCommand('copy'); alert('已複製'); }); } else { output.select(); document.execCommand('copy'); alert('已複製'); } saveOutput(); });
+btnClear && btnClear.addEventListener('click', ()=>{ if (confirm && !confirm('清空輸出內容？')) return; output.value=''; saveOutput(); });
+
+btnRestoreBtn && btnRestoreBtn.addEventListener('click', ()=>{ const rec = deletedButtons.shift(); if (!rec){ alert('沒有可恢復的按鈕'); return; } const gidx = rec.groupIndex; if (!data[gidx]) { data[0].words.push(rec.name); } else { const pos = Math.min(rec.index, data[gidx].words.length); data[gidx].words.splice(pos,0,rec.name); } saveAndRender(); });
+btnRestoreGroup && btnRestoreGroup.addEventListener('click', ()=>{ const rec = deletedGroups.shift(); if (!rec){ alert('沒有可恢復的群組'); return; } const idx = Math.min(rec.index, data.length); data.splice(idx,0,{ name: rec.name, words: rec.words }); saveAndRender(); });
+
+btnExport && btnExport.addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify({ data, deletedButtons, deletedGroups, historyLimit }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); const ts = new Date().toISOString().replace(/[:.]/g,'-'); a.download = `quickphrases_${ts}.json`; a.click(); URL.revokeObjectURL(a.href); });
+
+importFile && importFile.addEventListener('change', (e)=>{ const f = e.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload = (ev)=>{ try { const parsed = JSON.parse(ev.target.result); if (!Array.isArray(parsed.data) && !Array.isArray(parsed)) { if (!Array.isArray(parsed.data)) throw new Error('格式錯誤'); } if (Array.isArray(parsed)) data = parsed; else { data = parsed.data || data; deletedButtons = parsed.deletedButtons || []; deletedGroups = parsed.deletedGroups || []; historyLimit = parsed.historyLimit || historyLimit; } historyLimitEl && (historyLimitEl.value = historyLimit); saveAll(); render(); alert('匯入完成'); } catch(err){ alert('匯入失敗：格式錯誤'); } }; reader.readAsText(f,'utf-8'); e.target.value=''; });
+
+// Update UI: create update icon and help toggle
+function createUpdateUI(){ const header = document.querySelector('header'); if (!header) return; const h1 = header.querySelector('h1'); if (!h1) return; const cont = document.createElement('div'); cont.style.display='flex'; cont.style.alignItems='center'; cont.style.gap='8px'; cont.style.marginLeft='8px'; const btn = document.createElement('button'); btn.id='updateBtn'; btn.className='icon-btn'; btn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 12a9 9 0 1 0-3.3 6.7L21 12"/><path d="M21 3v9h-9"/></svg>`; btn.title='檢查更新'; btn.style.border='1px solid #666'; btn.style.background='#fff'; btn.addEventListener('click', (e)=>{ e.stopPropagation(); const panel = document.getElementById('updatePanel'); if (panel) panel.style.display = panel.style.display === 'block' ? 'none' : 'block'; }); h1.parentNode.appendChild(cont); cont.appendChild(btn); const updatePanel = document.createElement('div'); updatePanel.id='updatePanel'; updatePanel.style.display='none'; updatePanel.style.position='absolute'; updatePanel.style.background='#fff'; updatePanel.style.border='1px solid #ddd'; updatePanel.style.padding='10px'; updatePanel.style.borderRadius='8px'; updatePanel.style.boxShadow='0 6px 18px rgba(0,0,0,0.08)'; updatePanel.style.marginTop='8px'; updatePanel.style.zIndex='9999'; updatePanel.innerHTML = `<div style="font-weight:600;margin-bottom:6px">有新版本可用</div><div style="font-size:13px;margin-bottom:6px">版本： <span class="ver"></span> <div class="ts" style="font-size:12px;color:#666"></div></div><div style="display:flex;gap:8px"><button id="btnUpdateNow" style="background:#003C96;color:#fff;padding:6px 8px;border-radius:6px;border:none;cursor:pointer">立即更新</button><button id="btnUpdateLater" style="background:#eee;color:#111;padding:6px 8px;border-radius:6px;border:none;cursor:pointer">稍後</button></div>`; cont.appendChild(updatePanel); document.getElementById('btnUpdateNow').addEventListener('click', ()=>{ doUpdateNow(); }); document.getElementById('btnUpdateLater').addEventListener('click', ()=>{ updatePanel.style.display='none'; }); document.addEventListener('click', (e)=>{ if (updatePanel && !updatePanel.contains(e.target) && e.target !== btn) updatePanel.style.display='none'; }); }
+
+function doUpdateNow(){ if (navigator.serviceWorker && navigator.serviceWorker.controller){ navigator.serviceWorker.getRegistration().then(reg=>{ if (reg && reg.waiting){ reg.waiting.postMessage({type:'SKIP_WAITING'}); navigator.serviceWorker.addEventListener('controllerchange', ()=> { window.location.reload(); }); } else { window.location.reload(true); } }).catch(()=> window.location.reload(true)); } else { window.location.reload(true); } }
+
+async function checkRemoteVersion(){ try{ const res = await fetch(VERSION_JSON_URL, {cache: 'no-store'}); if (!res.ok) return; const remote = await res.json(); if (remote && remote.version && remote.version !== APP_VERSION){ const btn = document.getElementById('updateBtn'); if (btn) btn.classList.add('active'); } else { const btn = document.getElementById('updateBtn'); if (btn) btn.classList.remove('active'); } } catch(e){} }
+
+// Service worker register and message
+if ('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('/service-worker.js').then(reg=>{ console.log('SW registered', reg); if (reg.waiting){ const btn = document.getElementById('updateBtn'); if (btn) btn.classList.add('active'); } reg.addEventListener('updatefound', ()=>{ const nw = reg.installing; nw.addEventListener('statechange', ()=>{ if (nw.state === 'installed' && navigator.serviceWorker.controller){ const btn = document.getElementById('updateBtn'); if (btn) btn.classList.add('active'); } }); }); }).catch(err=> console.warn('SW register failed', err)); }); }
+
+// HELP button toggle (added)
+(function(){
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const helpBtn = document.getElementById('helpBtn');
+    const helpList = document.getElementById('helpList');
+    if (helpBtn && helpList){
+      helpBtn.addEventListener('click', (e)=>{ e.stopPropagation(); helpList.classList.toggle('show'); });
+      document.addEventListener('click', (e)=>{ if (!helpList.contains(e.target) && e.target !== helpBtn) helpList.classList.remove('show'); });
+    }
+    createUpdateUI();
+    checkRemoteVersion();
+    setInterval(checkRemoteVersion, 1000 * 60 * 5);
+  });
+})();
+
+function saveAndRender(){ saveAll(); render(); }
+if (saveKeyEl) saveKeyEl.addEventListener('change', ()=>{ loadAll(); loadOutput(); render(); });
+if (historyLimitEl) historyLimitEl.addEventListener('change', ()=>{ historyLimit = Math.max(1, parseInt(historyLimitEl.value,10) || 1); saveAndRender(); });
+
+function init(){ loadAll(); if (!Array.isArray(data) || data.length===0) data = defaultData(); if (!data[0] || data[0].name !== null) data.unshift({name:null, words:[]}); loadOutput(); render(); }
+init();
+
+// save group heights on mouseup/touchend
+document.addEventListener('mouseup', () => { const cards = document.querySelectorAll('.group'); cards.forEach((card)=>{ const gid = card.dataset.id; const g = data.find(d=>d.id === gid); if (g) g.height = card.style.height || (card.offsetHeight + 'px'); }); saveAll(); });
+document.addEventListener('touchend', () => { const cards = document.querySelectorAll('.group'); cards.forEach((card)=>{ const gid = card.dataset.id; const g = data.find(d=>d.id === gid); if (g) g.height = card.style.height || (card.offsetHeight + 'px'); }); saveAll(); });
