@@ -4,154 +4,137 @@
   <meta charset="utf-8" />
   <title>MA撰寫工具</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#003C96" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192-v3.png">
-  <link rel="apple-touch-icon" href="/icons/icon-192-v3.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#003C96">
   <style>
-    :root{--gap:10px;--radius:8px;--muted:#6b7280;--brand-blue:#003C96;--soft-black:#1A1A1A;--bottom-height:160px}
-    html,body{height:100%;margin:0;font-family:Arial,"Noto Sans TC",sans-serif;background:#f6f7fb;color:var(--soft-black);}
-    #app{display:flex;flex-direction:column;height:100vh;gap:12px;padding:12px;box-sizing:border-box;}
-    header{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    h1{font-size:18px;margin:0}
+    :root{--gap:10px;--radius:8px;--muted:#6b7280;--primary:#003C96}
+    body{font-family:Arial, "Noto Sans TC", sans-serif;margin:18px;background:#f6f7fb;color:#111}
+    header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+    h1{font-size:18px;margin:0;display:flex;align-items:center;gap:8px}
     .control-row{display:flex;gap:8px;align-items:center}
     input[type=text], input[type=number]{padding:8px;border-radius:6px;border:1px solid #ccc;background:#fff}
-    button{padding:8px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--brand-blue);color:#fff}
+    button{padding:8px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--primary);color:#fff}
     button.secondary{background:#3a3a3a}
     button.danger{background:#ef4444}
-    .main-area{flex:1 1 auto;display:flex;gap:12px;align-items:flex-start;padding-bottom: calc(var(--bottom-height) + 20px);overflow:auto;}
-    .groups-wrapper{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:12px;}
-    .unclassified{background:#f3f4f6;border-radius:10px;padding:10px;border:1px dashed #d1d5db}
-    #groups{display:flex;flex-direction:column;gap:12px;overflow:auto;max-height:100%}
-    .group{background:#fff;border-radius:10px;padding:10px;border:1px solid #e5e7eb;box-shadow:0 1px 2px rgba(0,0,0,0.03);resize:vertical;overflow:auto;min-height:80px;max-height:60vh;transition: box-shadow .12s}
-    .group:active, .group:hover{box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    #container{display:flex;flex-direction:column;gap:12px;min-height:60vh}
+    .unclassified{background:#cbcbcc;border-radius:10px;padding:10px;border:1px dashed #d1d5db}
+    .group{background:#fff;border-radius:10px;padding:10px;border:1px solid #e5e7eb;box-shadow:0 1px 2px rgba(0,0,0,0.03)}
     .group-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-    .group-title{font-weight:600;padding:6px 8px;border-radius:6px;background:#f8fafc;cursor:text}
+    .group-title{font-weight:600;padding:6px 8px;border-radius:6px;background:#f8fafc;cursor:text;border:1px solid var(--primary);background:linear-gradient(180deg,#eaf2ff, #fff)}
     .group-controls{margin-left:auto;display:flex;gap:6px;align-items:center}
     .add-input{padding:6px;border-radius:6px;border:1px solid #ddd}
-    .word-list{display:flex;flex-wrap:wrap;gap:8px}
-    .word-item{position:relative;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;cursor:default;padding-right:18px;max-width:220px;word-break:break-word}
-    .word-item .label{cursor:pointer;user-select:none}
-    .icon-actions{position:absolute;top:4px;right:-5px;display:flex;flex-direction:column;gap:3px;z-index:5;pointer-events:auto}
-    .icon-btn{width:14px;height:14px;border-radius:50%;background:#fff;border:1.4px solid #111;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;font-size:12px;line-height:1}
-    .icon-btn svg{ width:10px;height:10px; stroke:#111; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round }
+    .word-list{display:flex;flex-wrap:wrap;gap:11px}
+    .word-item{position:relative;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;cursor:default;padding-right:18px;}
+    .word-item .label{cursor:pointer; user-select:none}
+    .icon-actions{position:absolute;top:4px;right:-5px;display:flex;flex-direction:column;gap:3px;z-index:5;pointer-events:auto;}
+    .icon-btn{width:14px;height:14px;border-radius:50%;background:#fff;border:1.4px solid #111;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,0.03);font-size:12px;line-height:1;}
+    .icon-btn svg{ width:10px; height:10px; stroke: #111; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     .icon-btn:hover{ background:#f3f3f3 }
-    .output-panel{position:fixed;left:12px;right:12px;bottom:12px;height:var(--bottom-height);background: #fff;border-radius:10px;box-shadow:0 14px 40px rgba(2,6,23,0.18);padding:12px;display:flex;flex-direction:column;gap:8px;z-index:999}
-    .output-row{display:flex;gap:8px;align-items:center}
-    textarea#output{flex:1;padding:12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;resize:vertical;height:72px}
+    .input-with-icon{ display:flex; align-items:center; gap:8px; position:relative; }
+    .input-with-icon input{ padding-left:34px; }
+    .input-icon{ position:absolute; left:8px; width:20px; height:20px; border-radius:50%; background:#fff; border:1.4px solid #111; display:flex; align-items:center; justify-content:center; padding:0; pointer-events:none; }
+    .input-icon svg{ width:12px; height:12px; stroke:#111; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+    .output-wrap{position:fixed;left:18px;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:30}
+    textarea{width:100%;height:120px;padding:12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;resize:vertical;box-shadow:0 8px 20px rgba(0,0,0,0.12)}
     .bottom-row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
     .muted{color:var(--muted);font-size:13px}
-    .input-with-icon{ display:flex; align-items:center; gap:8px; position:relative }
-    .input-with-icon input{ padding-left:36px; }
-    .input-icon{ position:absolute; left:8px; width:20px; height:20px; border-radius:50%; background:#fff; border:1.4px solid #111; display:flex; align-items:center; justify-content:center; padding:0; pointer-events:none }
-    .input-icon svg{ width:12px; height:12px; stroke:#111; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round }
-    @media (max-width:800px){ :root{ --bottom-height: 180px; } header{padding-bottom:6px} .control-row{flex-wrap:wrap} .word-item{max-width:140px} .output-panel{left:8px;right:8px;bottom:8px} }
-    #updateBtn.active{ border-color: var(--brand-blue) !important; box-shadow: 0 0 0 4px rgba(0,60,150,0.06); }
-    /* v1.3 tweaks */
-    .title-icon{ width:22px; height:22px; vertical-align:middle; margin-left:8px; border-radius:4px; }
-    .help-container{ display:inline-block; position:relative; margin-top:4px; }
-    .help-list{ position:absolute; top:28px; left:0; background:#fff; border:1px solid #ddd; border-radius:8px; padding:8px 10px; box-shadow:0 8px 20px rgba(0,0,0,0.12); width:320px; z-index:1200; display:none; }
-    .help-list ul{ margin:0; padding:0 12px; list-style:disc; font-size:13px; color:var(--muted); }
-    .help-list.show{ display:block; }
-
-    .small-input{ font-size:13px; padding:6px 8px; width:80px; }
-    .action-btn{ padding:8px 12px; border-radius:6px; font-size:14px; cursor:pointer; }
-
-    /* shrink toolbar inputs */
-    .toolbar-short{ width:160px !important; }
-    #historyLimit{ width:48px !important; }
-    .export-btn{ background: var(--brand-blue); color:#fff; border: none; /*padding:8px 12px; border-radius:6px; */}
-
-    .export-btn:hover{ background:#002a6b; }
-    .import-btn{ background:#fff; color:var(--brand-blue); border:2px solid var(--brand-blue); /*padding:6px 10px; border-radius:6px;*/ }
-    .export-btn, .import-btn{ display:inline-flex; align-items:center; justify-content:center; } /*new*/
-
-    .import-btn:hover{ background: rgba(0,60,150,0.06); }
-    .action-btn.changed{ box-shadow: 0 0 0 3px rgba(0,60,150,0.08); border-color: #003C96; }
-
+    .inline-edit{ padding:6px 8px; font-size:14px; border-radius:6px; border:1px solid #bbb; }
+    @media (max-width:600px){ .word-item{ padding-right:48px; } .icon-actions{ right:6px; top:6px; } .output-wrap{left:8px;right:8px;bottom:8px} }
   </style>
 </head>
 <body>
-  <div id="app">
-    <header>
-      <div style="display:flex;flex-direction:column;margin-right:8px">
-        <h1>MA撰寫工具</h1>
-        <div class="muted"> <!-- replaced by help button --> </div>
-      </div>
-
-      <div class="control-row">
-        <label class="muted">存檔 Key</label>
-        <input id="saveKey" type="text" value="Config1" class="small-input" />
-        <label class="muted">恢復記錄數</label>
-        <input id="historyLimit" type="number" min="1" value="50" style="small-input" />
-
-        <div class="input-with-icon" style="margin-left:6px">
-          <span class="input-icon" title="新增群組 (Folder)">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-              <path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H3z"></path>
-            </svg>
-          </span>
-          <input id="newGroupInline" type="text" class="toolbar-short" placeholder="新增群組分類 (Enter)" />
-        </div>
-
-        <div class="input-with-icon">
-          <span class="input-icon" title="新增按鈕 (Add)">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-          <input id="newUnclassifiedInline" type="text" class="toolbar-short" placeholder="新增按鈕文字(加入未分類) (Enter)" />
-        </div>
-
-        <button id="btnExport" class="action-btn export-btn">匯出設定</button>
-        <label for="importFile" id="importLabel" class="action-btn import-btn" style="padding:8px 12px;border-radius:6px;cursor:pointer">匯入設定</label>
-        <input id="importFile" type="file" accept=".json" style="display:none" />
-
-        <div class="help-container" style="margin-left:8px">
-          <button id="helpBtn" style="background:#fff;border:1px solid #ccc;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">操作說明 ⓘ</button>
-          <div id="helpList" class="help-list">
-            <ul>
-              <li>左鍵：加入到輸出欄</li>
-              <li>編輯：右側鉛筆（或雙擊群組標題）</li>
-              <li>刪除：右側圓形 ×（可恢復）</li>
-              <li>拖曳：按鈕可跨群組；拖曳群組可排序</li>
-              <li>匯出/匯入設定可備份自訂的按鈕與分類</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <div class="main-area">
-      <div class="groups-wrapper">
-        <div id="unclassified" class="unclassified">
-          <div id="un_list" class="word-list" data-group-index="0"></div>
-        </div>
-        <div id="groups"></div>
-      </div>
+  <header>
+    <div style="display:flex;flex-direction:column;margin-right:8px">
+      <h1>MA撰寫工具 <img id="updateBadge" src="" alt="" style="width:18px;height:18px;display:none"></h1>
+      <div class="muted">左鍵：加入到輸出欄 • 編輯：按右側鉛筆 • 刪除：按右側圓形 × • 拖曳支援跨群組</div>
     </div>
-
-    <div class="output-panel" id="outputPanel" aria-live="polite">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="muted">MA輸出區</div>
-        <div class="muted">提示：拖曳群組可排序；拖曳按鈕可跨群組</div>
+    <div class="control-row">
+      <label class="muted">存檔 Key</label>
+      <input id="saveKey" type="text" value="Config1" style="width:140px" />
+      <label class="muted">恢復記錄數</label>
+      <input id="historyLimit" type="number" min="1" value="50" style="width:72px" />
+      <div class="input-with-icon" style="margin-left:6px">
+        <span class="input-icon" title="新增群組 (Folder)">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H3z"></path></svg>
+        </span>
+        <input id="newGroupInline" type="text" placeholder="新增群組分類" />
       </div>
-
-      <div class="output-row">
-        <textarea id="output" placeholder="顯示在這裡，也可以直接打字編輯..."></textarea>
+      <div class="input-with-icon">
+        <span class="input-icon" title="新增按鈕 (Add)">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 5v14M5 12h14"></path></svg>
+        </span>
+        <input id="newUnclassifiedInline" type="text" placeholder="新增按鈕文字(加入未分類)" />
       </div>
-
-      <div class="bottom-row">
-        <button id="btnCopy">複製MA</button>
-        <button id="btnClear" class="secondary">清空</button>
-        <button id="btnRestoreBtn" class="secondary">恢復最近刪除的按鈕</button>
-        <button id="btnRestoreGroup" class="secondary">恢復最近刪除的群組</button>
-        <div class="muted" style="margin-left:auto">匯出會下載 JSON 檔；上方可新增群組/按鈕。</div>
-      </div>
+      <button id="btnExport" class="secondary">匯出設定</button>
+      <label for="importFile" class="secondary" style="padding:8px 10px;border-radius:6px;cursor:pointer">匯入設定</label>
+      <input id="importFile" type="file" accept=".json" style="display:none" />
+    </div>
+  </header>
+  <main id="container" style="padding-bottom:220px">
+    <div id="unclassified" class="unclassified"><div id="un_list" class="word-list" data-group-index="0"></div></div>
+    <div id="groups"></div>
+  </main>
+  <div class="output-wrap">
+    <textarea id="output" placeholder="MA顯示區，也可以直接編輯"></textarea>
+    <div class="bottom-row">
+      <button id="btnCopy">複製句子</button>
+      <button id="btnClear" class="secondary">清空</button>
+      <button id="btnRestoreBtn" class="secondary">恢復最近刪除的按鈕</button>
+      <button id="btnRestoreGroup" class="secondary">恢復最近刪除的群組</button>
+      <div class="muted">提示：直接拖曳按鈕可移動到其他分類；匯出會下載 JSON 檔。</div>
     </div>
   </div>
-
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script src="/main.js"></script>
+  <script>
+    const STORAGE_KEY_BASE = 'quickphrases_v3_';
+    let data = []; let deletedButtons = []; let deletedGroups = []; let historyLimit = 5;
+    const saveKeyEl = document.getElementById('saveKey'); const historyLimitEl = document.getElementById('historyLimit');
+    const groupsContainer = document.getElementById('groups'); const unList = document.getElementById('un_list'); const output = document.getElementById('output');
+    const btnCopy = document.getElementById('btnCopy'); const btnClear = document.getElementById('btnClear'); const btnRestoreBtn = document.getElementById('btnRestoreBtn');
+    const btnRestoreGroup = document.getElementById('btnRestoreGroup'); const btnExport = document.getElementById('btnExport'); const importFile = document.getElementById('importFile');
+    const newGroupInline = document.getElementById('newGroupInline'); const newUnclassifiedInline = document.getElementById('newUnclassifiedInline');
+    const updateBadge = document.getElementById('updateBadge'); let sortables = [];
+    function storageKey() { return STORAGE_KEY_BASE + (saveKeyEl.value || 'Config1'); }
+    function defaultData() { return [{ name: null, words: [] },{ name: '水果', words: ['蘋果','香蕉'] },{ name: '形容詞', words: ['好吃','很棒'] }]; }
+    function saveAll() { try { localStorage.setItem(storageKey(), JSON.stringify({ data, deletedButtons, deletedGroups, historyLimit })); } catch (e){}; saveOutput(); }
+    function loadAll() { try { const raw = localStorage.getItem(storageKey()); if (!raw) { data = defaultData(); deletedButtons = []; deletedGroups = []; historyLimit = parseInt(historyLimitEl.value,10) || 5; return; } const parsed = JSON.parse(raw); data = parsed.data || defaultData(); deletedButtons = parsed.deletedButtons || []; deletedGroups = parsed.deletedGroups || []; historyLimit = parsed.historyLimit || parseInt(historyLimitEl.value,10) || 5; } catch (e) { data = defaultData(); deletedButtons = []; deletedGroups = []; } }
+    function clearSortables(){ sortables.forEach(s=>s && s.destroy && s.destroy()); sortables = []; }
+    function render(){ if (!Array.isArray(data) || data.length === 0) data = defaultData(); if (!data[0] || data[0].name !== null) { data.unshift({name:null, words:[]}); }
+      historyLimit = parseInt(historyLimitEl.value,10) || historyLimit; while (deletedButtons.length > historyLimit) deletedButtons.pop(); while (deletedGroups.length > historyLimit) deletedGroups.pop();
+      unList.innerHTML = ''; (data[0].words || []).forEach((w, idx) => { unList.appendChild(makeWordElement(w, 0, idx)); });
+      groupsContainer.innerHTML = ''; for (let i = 1; i < data.length; i++) { const g = data[i]; const groupCard = document.createElement('div'); groupCard.className = 'group'; groupCard.dataset.index = i;
+        const header = document.createElement('div'); header.className = 'group-header';
+        const title = document.createElement('div'); title.className = 'group-title'; title.textContent = g.name || '未命名';
+        title.addEventListener('dblclick', (ev) => { ev.stopPropagation(); const input = document.createElement('input'); input.type = 'text'; input.className = 'add-input'; input.value = g.name || ''; function finishEdit() { const v = input.value.trim(); if (v) g.name = v; input.replaceWith(title); title.textContent = g.name || '未命名'; saveAndRender(); } input.addEventListener('blur', finishEdit); input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); else if (e.key === 'Escape') { input.replaceWith(title); } }); title.replaceWith(input); input.focus(); input.select(); });
+        header.appendChild(title);
+        const addInput = document.createElement('input'); addInput.className='add-input'; addInput.placeholder='新增按鈕，按 Enter 新增'; addInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { const val = addInput.value.trim(); if (val) { g.words.push(val); addInput.value = ''; saveAndRender(); } } }); header.appendChild(addInput);
+        const controls = document.createElement('div'); controls.className='group-controls'; const delG = document.createElement('button'); delG.className='danger'; delG.textContent='刪除群組'; delG.addEventListener('click', ()=>{ const rec = { name: g.name, words: [...g.words], index: i }; deletedGroups.unshift(rec); if (deletedGroups.length > historyLimit) deletedGroups.pop(); data.splice(i,1); saveAndRender(); }); controls.appendChild(delG); header.appendChild(controls); groupCard.appendChild(header);
+        const list = document.createElement('div'); list.className='word-list'; list.dataset.groupIndex = i; g.words.forEach((w, idx) => { list.appendChild(makeWordElement(w, i, idx)); }); groupCard.appendChild(list); groupsContainer.appendChild(groupCard);
+      }
+      clearSortables(); const lists = document.querySelectorAll('.word-list, #un_list'); lists.forEach(listEl=>{ const s = new Sortable(listEl, { group: 'shared', animation:150, onEnd: function(evt) { const fromIdx = parseInt(evt.from.dataset.groupIndex || 0,10); const toIdx = parseInt(evt.to.dataset.groupIndex || 0,10); const oldIndex = evt.oldIndex; const newIndex = evt.newIndex; if (isNaN(fromIdx) || isNaN(toIdx)) return; const item = (data[fromIdx] && data[fromIdx].words && data[fromIdx].words[oldIndex]) || null; if (item === null) { render(); return; } data[fromIdx].words.splice(oldIndex,1); data[toIdx].words.splice(newIndex,0,item); saveAndRender(); } }); sortables.push(s); });
+      saveAll();
+    }
+    function makeWordElement(word, groupIndex, index) { const el = document.createElement('div'); el.className='word-item'; el.dataset.groupIndex = groupIndex; el.dataset.wordIndex = index; const label = document.createElement('span'); label.className='label'; label.textContent = word; label.title = '點擊加入輸出欄'; label.addEventListener('click', () => { output.value += word; saveOutput(); }); el.appendChild(label); const actions = document.createElement('div'); actions.className='icon-actions';
+      const editBtn = document.createElement('button'); editBtn.className='icon-btn'; editBtn.title='編輯文字'; editBtn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M3 17.25V21h3.75L18.81 8.94l-3.75-3.75L3 17.25z"></path><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>`;
+      editBtn.addEventListener('click', (e) => { e.stopPropagation(); const input = document.createElement('input'); input.type = 'text'; input.value = word; input.className = 'inline-edit'; el.replaceChild(input, label); input.focus(); input.select(); function finishEdit() { const v = input.value.trim(); if (v) data[groupIndex].words[index] = v; render(); } input.addEventListener('blur', finishEdit); input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') input.blur(); else if (ev.key === 'Escape') { render(); } }); });
+      const delBtn = document.createElement('button'); delBtn.className='icon-btn'; delBtn.title='刪除按鈕'; delBtn.style.border = '1px solid #111'; delBtn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M6 6L18 18M6 18L18 6"></path></svg>`; delBtn.addEventListener('click', (e) => { e.stopPropagation(); const rec = { name: word, groupIndex, index }; deletedButtons.unshift(rec); if (deletedButtons.length > historyLimit) deletedButtons.pop(); data[groupIndex].words.splice(index,1); saveAndRender(); });
+      actions.appendChild(delBtn); actions.appendChild(editBtn); el.appendChild(actions); return el;
+    }
+    newGroupInline.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const name = newGroupInline.value.trim(); if (!name) return; data.push({ name, words: [] }); newGroupInline.value = ''; saveAndRender(); } });
+    newUnclassifiedInline.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const txt = newUnclassifiedInline.value.trim(); if (!txt) return; data[0].words.push(txt); newUnclassifiedInline.value = ''; saveAndRender(); } });
+    btnCopy.addEventListener('click', ()=>{ output.select(); document.execCommand('copy'); alert('已複製：' + output.value); saveOutput(); });
+    btnClear.addEventListener('click', ()=>{ output.value=''; saveOutput(); });
+    btnRestoreBtn.addEventListener('click', ()=> { const rec = deletedButtons.shift(); if (!rec) { alert('沒有可恢復的按鈕'); return; } const gidx = rec.groupIndex; if (!data[gidx]) { data[0].words.push(rec.name); } else { const pos = Math.min(rec.index, data[gidx].words.length); data[gidx].words.splice(pos,0,rec.name); } saveAndRender(); });
+    btnRestoreGroup.addEventListener('click', ()=> { const rec = deletedGroups.shift(); if (!rec) { alert('沒有可恢復的群組'); return; } const idx = Math.min(rec.index, data.length); data.splice(idx,0,{ name: rec.name, words: rec.words }); saveAndRender(); });
+    btnExport.addEventListener('click', ()=> { const blob = new Blob([JSON.stringify({ data, deletedButtons, deletedGroups, historyLimit }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); const ts = new Date().toISOString().replace(/[:.]/g,'-'); a.download = `quickphrases_${ts}.json`; a.click(); URL.revokeObjectURL(a.href); });
+    importFile.addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload = (ev) => { try { const parsed = JSON.parse(ev.target.result); if (!Array.isArray(parsed.data)) throw new Error('格式錯誤'); data = parsed.data; deletedButtons = parsed.deletedButtons || []; deletedGroups = parsed.deletedGroups || []; historyLimit = parsed.historyLimit || historyLimit; historyLimitEl.value = historyLimit; saveAll(); render(); alert('匯入完成'); } catch (err) { alert('匯入失敗：格式錯誤'); } }; reader.readAsText(f,'utf-8'); e.target.value=''; });
+    function saveOutput(){ try{ localStorage.setItem(storageKey() + '_output', output.value); }catch(e){} }
+    function loadOutput(){ try{ const v = localStorage.getItem(storageKey() + '_output'); if (v) output.value = v; }catch(e){} }
+    function saveAndRender(){ saveAll(); render(); }
+    saveKeyEl.addEventListener('change', ()=>{ loadAll(); loadOutput(); render(); });
+    historyLimitEl.addEventListener('change', ()=>{ historyLimit = Math.max(1, parseInt(historyLimitEl.value,10) || 1); saveAndRender(); });
+    function init(){ loadAll(); if (!Array.isArray(data) || data.length === 0) data = defaultData(); if (!data[0] || data[0].name !== null) data.unshift({name:null, words:[]}); loadOutput(); render(); } init();
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('service-worker.js').then(reg=>{ console.log('sw registered', reg); fetch('version.json').then(r=>r.json()).then(v=>{ const localV = localStorage.getItem('ma_tool_version') || '1.3.0'; if (v.version && v.version !== localV) { updateBadge.style.display = 'inline-block'; updateBadge.src = 'icons/icon-192-v3.png'; updateBadge.title = '有新版本，點此檢視'; updateBadge.addEventListener('click', ()=>{ if (confirm('發現新版本，是否重新載入以更新？')) { localStorage.setItem('ma_tool_version', v.version); location.reload(true); } }); } }).catch(()=>{}); }).catch(err=>console.warn('sw failed', err)); }
+  </script>
 </body>
 </html>
